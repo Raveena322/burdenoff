@@ -1,0 +1,30 @@
+{
+  "name": "burdenoff-document-vault",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "gendb": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "sanity": "bun run lint && bun run typecheck && bun run test"
+  },
+  "dependencies": {
+    "graphql-yoga": "^5.15.2",
+    "@prisma/client": "^6.7.0",
+    "graphql": "^16.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/bun": "^1.2.8",
+    "eslint": "^9.24.0",
+    "prisma": "^6.7.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  }
+}
