@@ -1,0 +1,41 @@
+scalar DateTime
+
+type Collection {
+  id: ID!
+  name: String!
+  slug: String!
+  createdAt: DateTime!
+  documents(take: Int = 20, cursor: ID): DocumentConnection!
+}
+
+type Document {
+  id: ID!
+  title: String!
+  content: String!
+  tags: [String!]!
+  collectionId: ID!
+  isArchived: Boolean!
+  createdAt: DateTime!
+}
+
+type DocumentEdge { node: Document!, cursor: ID! }
+type PageInfo { hasNextPage: Boolean!, endCursor: ID }
+type DocumentConnection { edges: [DocumentEdge!]!, pageInfo: PageInfo! }
+
+input CreateCollectionInput { name: String!, slug: String! }
+input CreateDocumentInput { title: String!, content: String!, tags: [String!] = [], collectionId: ID! }
+input UpdateDocumentInput { title: String, content: String, tags: [String!], isArchived: Boolean }
+
+type Query {
+  collections: [Collection!]!
+  collection(id: ID!): Collection
+  documents(collectionId: ID, search: String, isArchived: Boolean, take: Int = 20, cursor: ID): DocumentConnection!
+}
+
+type Mutation {
+  createCollection(input: CreateCollectionInput!): Collection!
+  createDocument(input: CreateDocumentInput!): Document!
+  updateDocument(id: ID!, input: UpdateDocumentInput!): Document!
+  deleteDocument(id: ID!): Boolean!
+  moveDocument(id: ID!, collectionId: ID!): Document!
+}
