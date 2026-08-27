@@ -1,69 +1,75 @@
-# Burdenoff Document Vault — GraphQL API
+# Document Vault — GraphQL API
 
-A clean, production-grade schema-first GraphQL API built with **Bun**, **TypeScript** (strict mode, zero `any`), **GraphQL Yoga**, **PostgreSQL**, and **Prisma**.
+A clean, maintainable, schema-first GraphQL API for organizing documents into collections built with **Bun**, **TypeScript** (strict mode, zero `any`), **GraphQL Yoga**, **PostgreSQL**, and **Prisma**.
 
 ---
 
-## 🚀 One-Command Quickstart
+## ⚡ Quickstart
 
-Ensure **Docker** and **Bun** are installed on your system.
+### Prerequisites
+- [Bun](https://bun.sh)
+- [Docker & Docker Compose](https://www.docker.com/)
+
+### One-Command Setup & Run
+Copy `.env.example` to `.env`, then run:
 
 ```sh
 docker compose up -d && bun install && bun run gendb && bun run db:migrate --name init && bun run dev
 ```
 
-The GraphQL server and interactive GraphiQL playground will be live at:
+The GraphQL API and GraphiQL interactive playground will be running at:  
 👉 **`http://localhost:4000/graphql`**
 
 ---
 
 ## 🛠️ Scripts & Commands
 
-- **`bun run dev`** — Start development server with hot reloading (`bun --watch src/server.ts`)
-- **`bun run sanity`** — Run linting, typechecking, and tests in one single command (`lint` + `typecheck` + `test`)
-- **`bun run test`** — Execute Vitest test suite
-- **`bun run typecheck`** — Strict TypeScript type checking (`tsc --noEmit`)
-- **`bun run lint`** — Run ESLint rules
-- **`bun run gendb`** — Generate Prisma Client code (`prisma generate`)
-- **`bun run db:migrate`** — Execute Prisma database migrations (`prisma migrate dev`)
+- **`bun run sanity`** — Runs linting, typechecking, and unit tests in one command (`eslint` + `tsc` + `vitest`).
+- **`bun run dev`** — Starts the dev server with hot reloading (`bun --watch src/server.ts`).
+- **`bun run test`** — Runs Vitest test suite.
+- **`bun run typecheck`** — Runs TypeScript strict typecheck (`tsc --noEmit`).
+- **`bun run lint`** — Runs ESLint checks.
+- **`bun run gendb`** — Generates Prisma Client code (`prisma generate`).
+- **`bun run db:migrate`** — Applies Prisma database migrations (`prisma migrate dev`).
 
 ---
 
-## 📐 Domain Schema Overview
+## 📊 Domain & Required Operations
 
 ### Data Models
 - **`Collection`**: `id` (UUID), `name`, `slug` (unique), `createdAt`
 - **`Document`**: `id` (UUID), `title`, `content`, `tags` (string array), `collectionId`, `isArchived` (boolean), `createdAt`
 
-### Required Operations
+### Operations
 
 #### Queries
-- `collections`: Fetch all collections sorted by creation time (`createdAt desc`).
-- `collection(id: ID!)`: Fetch a single collection with nested cursor-paginated `documents`.
-- `documents(collectionId: ID, search: String, isArchived: Boolean, take: Int = 20, cursor: ID)`: Query documents with substring search on `title` or `content`, filter by collection or `isArchived`, and cursor-based pagination.
+- `collections`: Fetches all collections ordered by creation date (`createdAt desc`).
+- `collection(id: ID!)`: Fetches a single collection with nested, paginated `documents`.
+- `documents(collectionId: ID, search: String, isArchived: Boolean, take: Int = 20, cursor: ID)`: Filters documents by collection, archived status, or case-insensitive substring search on `title` or `content`, returning a `DocumentConnection` with cursor pagination.
 
 #### Mutations
-- `createCollection(input: CreateCollectionInput!)`: Create a collection with name & slug validation.
-- `createDocument(input: CreateDocumentInput!)`: Create a document with title, content, and parent collection validation.
-- `updateDocument(id: ID!, input: UpdateDocumentInput!)`: Update document properties.
-- `deleteDocument(id: ID!)`: Delete a document by ID.
-- `moveDocument(id: ID!, collectionId: ID!)`: Relocate a document to a different collection.
+- `createCollection(input: CreateCollectionInput!)`: Creates a collection with name & slug validation.
+- `createDocument(input: CreateDocumentInput!)`: Creates a document within an existing collection.
+- `updateDocument(id: ID!, input: UpdateDocumentInput!)`: Updates title, content, tags, or archived state.
+- `deleteDocument(id: ID!)`: Deletes a document by ID.
+- `moveDocument(id: ID!, collectionId: ID!)`: Moves a document to another collection.
 
 ---
 
-## 🛡️ Input Validation & Error Handling
+## 🛡️ Validation & Error Handling
 
-All client errors and invalid states return structured GraphQL errors with explicit error extensions rather than unhandled 500 internal server errors:
-- **`BAD_USER_INPUT`**: Thrown for empty/whitespace titles, empty/whitespace contents, malformed slugs (must match `^[a-z0-9]+(?:-[a-z0-9]+)*$`), or invalid `take` range (1 to 100).
-- **`NOT_FOUND`**: Thrown when referencing or mutating non-existent documents or parent collections.
-- **`ALREADY_EXISTS`**: Thrown when attempting to create a collection with a duplicate `slug` (handling Prisma's `P2002` unique constraint).
+Invalid inputs and database constraints return structured GraphQL errors with explicit `code` extensions rather than unhandled 500 server errors:
+
+- **`BAD_USER_INPUT`**: Returned for empty/whitespace titles, empty/whitespace content, malformed slugs (regex: `^[a-z0-9]+(?:-[a-z0-9]+)*$`), or invalid `take` values (< 1 or > 100).
+- **`NOT_FOUND`**: Returned when querying or mutating non-existent documents or collections.
+- **`ALREADY_EXISTS`**: Returned when creating a collection with a duplicate `slug` (translates Prisma `P2002` unique constraint error).
 
 ---
 
 ## 🧪 Testing
 
-- **Unit Tests (`tests/resolvers.test.ts`)**: 17 isolated unit tests verifying resolver execution, schema validation, query filters, search, edge cases, error codes, and cursor pagination using an in-memory mock context.
-- **Integration Tests (`tests/integration.test.ts`)**: Database integration test verifying real PostgreSQL connection, table creation, foreign keys, searching, and record cleanup when `DATABASE_URL` is set.
+- **Resolver Unit Tests (`tests/resolvers.test.ts`)**: 17 isolated unit tests verifying resolver queries, mutations, validation guardrails, cursor pagination, and error codes using an in-memory mock context.
+- **Integration Test (`tests/integration.test.ts`)**: Verifies real database connection, schema constraints, updates, and cleanup when `DATABASE_URL` is set against PostgreSQL.
 
 Run all tests via:
 ```sh
@@ -74,20 +80,20 @@ bun run sanity
 
 ## 🐳 Docker & CI/CD
 
-- **`Dockerfile`**: Multi-stage container build based on `oven/bun:1.2-alpine`.
-- **GitHub Actions (`.github/workflows/ci.yml`)**: Automated workflow running `bun run sanity` on pull requests and pushes to `main`.
+- **`Dockerfile`**: Container setup based on `oven/bun:1.2-alpine`.
+- **GitHub Actions (`.github/workflows/ci.yml`)**: CI workflow running `bun run sanity` on pull requests and pushes to `main`.
 
 ---
 
 ## ⚖️ Trade-offs & Future Extensions
 
-### Architectural Trade-offs
-1. **Schema-First Approach**: Kept GraphQL schema in a separate `schema/schema.graphql` file for clear specification and clean separation from TypeScript resolver logic.
-2. **Cursor Pagination Strategy**: Used deterministic sorting `(createdAt desc, id desc)` with UUID document ID cursors. This avoids offset pagination performance degrades on large datasets.
-3. **Domain Error Guardrails**: Validated input in domain code before calling Prisma to return clear GraphQL error codes (`BAD_USER_INPUT`, `NOT_FOUND`, `ALREADY_EXISTS`).
+### Trade-offs Made
+1. **Schema-First Specification**: Maintained `schema/schema.graphql` separately to provide a clear, readable GraphQL API contract.
+2. **Cursor Pagination Strategy**: Used composite sorting `(createdAt desc, id desc)` with UUID document cursors to prevent offset page drift and maintain consistent `O(1)` query performance.
+3. **Domain Error Guardrails**: Validated input in resolver handlers before hitting Prisma to return clean, explicit GraphQL error codes.
 
 ### How I Would Extend the Design
-- **Full-Text Search (FTS)**: For high-volume documents, replace SQL `ILIKE` / `contains` substring matches with PostgreSQL `tsvector` / `tsquery` full-text search indexes or an external search engine (e.g., Elasticsearch / Meilisearch).
-- **DataLoader for Batching**: Introduce DataLoader instances for parent-child relationship resolution to prevent N+1 query overhead when fetching collections with nested documents.
-- **Authentication & RBAC**: Add JWT / Session authentication and scoped collection access rules at the context / resolver boundary.
-- **Soft Deletion & Audit Logs**: Add soft deletion (`deletedAt`) and historical revision tracking for document version history.
+- **Full-Text Search (FTS)**: For large document volume, replace SQL `contains` (`ILIKE`) with PostgreSQL `tsvector`/`tsquery` full-text search indexes or an external engine like Meilisearch/Elasticsearch.
+- **DataLoader for Batching**: Introduce `DataLoader` to batch parent-child relations and avoid N+1 query patterns when querying nested documents across multiple collections.
+- **Authentication & RBAC**: Integrate JWT/session authentication and role-based access control at the Yoga context level.
+- **Soft Deletes & Audit Trails**: Add `deletedAt` soft deletion and historical document revision tracking.
